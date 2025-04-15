@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tabbed Dashboard App</title>
+  <title>Login - Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -19,32 +19,6 @@
       padding: 20px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .tabs {
-      display: flex;
-      background: #007bff;
-      border-radius: 8px 8px 0 0;
-      overflow: hidden;
-    }
-    .tab {
-      flex: 1;
-      text-align: center;
-      padding: 14px;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .tab:hover {
-      background: #0056b3;
-    }
-    .active-tab {
-      background: #0056b3;
-    }
-    .page {
-      display: none;
-    }
-    .page.active {
-      display: block;
-    }
     input, button {
       display: block;
       margin: 10px 0;
@@ -52,25 +26,28 @@
       width: 100%;
       max-width: 400px;
     }
-    table, th, td {
-      border: 1px solid #ccc;
-      border-collapse: collapse;
-      padding: 8px;
-    }
-    table {
-      width: 100%;
-      margin-top: 10px;
-    }
     #logout {
-      float: right;
-      margin-top: -40px;
       background: crimson;
       color: white;
       padding: 8px 12px;
       border: none;
       border-radius: 6px;
+      margin-top: 20px;
     }
-    .hidden {
+    #login-section {
+      text-align: center;
+    }
+    #app-section {
+      display: none;
+    }
+    #error-message {
+      color: red;
+      font-size: 14px;
+    }
+    #user-list {
+      margin-top: 20px;
+    }
+    #admin-section {
       display: none;
     }
   </style>
@@ -83,206 +60,144 @@
   <input type="text" id="username" placeholder="Username" />
   <input type="password" id="password" placeholder="Password" />
   <button onclick="login()">Login</button>
+  <p id="error-message"></p>
 </div>
 
-<!-- Main App Section -->
-<div class="container hidden" id="app-section">
+<!-- Dashboard Section -->
+<div class="container" id="app-section">
+  <h2>Welcome to the Dashboard</h2>
   <button id="logout" onclick="logout()">Logout</button>
-  <h2>Welcome, <span id="user-role"></span></h2>
-
-  <!-- Tabs -->
-  <div class="tabs" id="tabs">
-    <div class="tab active-tab" onclick="showPage('dashboard')">Dashboard</div>
-    <div class="tab" onclick="showPage('roi')">ROI Calculator</div>
-    <div class="tab" onclick="showPage('upload')">File Upload</div>
-    <div class="tab hidden" id="admin-tab" onclick="showPage('admin')">Admin Panel</div>
+  <div id="user-info">
+    <p id="welcome-msg"></p>
   </div>
+</div>
 
-  <!-- Pages -->
-  <div id="dashboard" class="page">
-    <h3>🏠 Dashboard</h3>
-    <p>This is the main dashboard. Use the tabs above to explore features.</p>
-  </div>
+<!-- Admin Panel -->
+<div class="container" id="admin-section">
+  <h2>Admin Panel</h2>
+  
+  <h4>Add New User</h4>
+  <input type="text" id="new-username" placeholder="New Username" />
+  <input type="password" id="new-password" placeholder="New Password" />
+  <button onclick="addUser()">Add User</button>
 
-  <div id="roi" class="page">
-    <h3>📊 ROI Calculator</h3>
-    <input type="number" id="cost" placeholder="Cost" />
-    <input type="number" id="gain" placeholder="Return" />
-    <button onclick="calculateROI()">Calculate ROI</button>
-    <p id="roi-result"></p>
-  </div>
+  <h4>Reset User Password</h4>
+  <input type="text" id="reset-username" placeholder="Username to Reset" />
+  <input type="password" id="reset-password" placeholder="New Password" />
+  <button onclick="resetPassword()">Reset Password</button>
 
-  <div id="upload" class="page">
-    <h3>📁 File Upload & Analysis</h3>
-    <input type="file" id="fileInput" accept=".csv" />
-    <button onclick="analyzeFile()">Analyze</button>
-    <div id="file-analysis"></div>
-  </div>
+  <h4>Delete User</h4>
+  <input type="text" id="delete-username" placeholder="Username to Delete" />
+  <button onclick="deleteUser()">Delete User</button>
 
-  <!-- ADMIN PANEL START -->
-  <div id="admin" class="page">
-    <h3>🔐 Admin Panel</h3>
-
-    <h4>➕ Add New User</h4>
-    <input type="text" id="new-username" placeholder="New Username" />
-    <input type="password" id="new-password" placeholder="New Password" />
-    <button onclick="addUser()">Add User</button>
-
-    <h4>🔁 Reset Password</h4>
-    <input type="text" id="reset-username" placeholder="Username to Reset" />
-    <input type="password" id="reset-password" placeholder="New Password" />
-    <button onclick="resetPassword()">Reset Password</button>
-
-    <h4>❌ Delete User</h4>
-    <input type="text" id="delete-username" placeholder="Username to Delete" />
-    <button onclick="deleteUser()">Delete User</button>
-
-    <h4>👥 All Users</h4>
-    <ul id="user-list"></ul>
-  </div>
-  <!-- ADMIN PANEL END -->
+  <h4>All Users</h4>
+  <ul id="user-list"></ul>
 </div>
 
 <script>
+  // Initialize users from localStorage
   let users = JSON.parse(localStorage.getItem('users')) || {
-    admin: 'admin123',
-    user: 'user123'
+    admin: 'admin123',  // Initial admin
+    user: 'user123'     // Initial user
   };
 
+  // Function to save users back to localStorage
   function saveUsers() {
     localStorage.setItem('users', JSON.stringify(users));
   }
 
+  // Login function
   function login() {
     const uname = document.getElementById('username').value;
     const pwd = document.getElementById('password').value;
+    const errorMessage = document.getElementById('error-message');
 
+    // Check if credentials are correct
     if (users[uname] && users[uname] === pwd) {
-      localStorage.setItem('loggedInUser', uname);
-      showApp();
+      localStorage.setItem('loggedInUser', uname); // Store logged-in user
+      showApp(uname);
+      errorMessage.textContent = '';
     } else {
-      alert('Invalid credentials!');
+      errorMessage.textContent = 'Invalid credentials! Please try again.';
     }
   }
 
+  // Show app (dashboard) after login
+  function showApp(user) {
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('app-section').style.display = 'block';
+    document.getElementById('welcome-msg').textContent = `Welcome, ${user}!`;
+
+    if (user === 'admin') {
+      document.getElementById('admin-section').style.display = 'block'; // Show admin panel
+      renderUserList();
+    }
+  }
+
+  // Logout function
   function logout() {
     localStorage.removeItem('loggedInUser');
     location.reload();
   }
 
-  function showApp() {
-    const user = localStorage.getItem('loggedInUser');
-    if (!user) return;
-
-    document.getElementById('login-section').classList.add('hidden');
-    document.getElementById('app-section').classList.remove('hidden');
-    document.getElementById('user-role').innerText = user;
-
-    if (user === 'admin') {
-      document.getElementById('admin-tab').classList.remove('hidden');
-      renderUserList();
-    }
-
-    showPage('dashboard');
-  }
-
-  function calculateROI() {
-    const cost = parseFloat(document.getElementById('cost').value);
-    const gain = parseFloat(document.getElementById('gain').value);
-
-    if (isNaN(cost) || isNaN(gain)) {
-      document.getElementById('roi-result').innerText = 'Please enter valid numbers.';
-      return;
-    }
-
-    const roi = ((gain - cost) / cost) * 100;
-    document.getElementById('roi-result').innerText = `ROI: ${roi.toFixed(2)}%`;
-  }
-
-  function analyzeFile() {
-    const file = document.getElementById('fileInput').files[0];
-    if (!file) return alert('Please upload a CSV file.');
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const lines = e.target.result.split('\n').filter(line => line.trim() !== '');
-      const headers = lines[0].split(',');
-      const numRows = lines.length - 1;
-
-      let tableHTML = '<table><tr>';
-      headers.forEach(h => tableHTML += `<th>${h}</th>`);
-      tableHTML += '</tr>';
-
-      lines.slice(1).forEach(row => {
-        tableHTML += '<tr>';
-        row.split(',').forEach(col => tableHTML += `<td>${col}</td>`);
-        tableHTML += '</tr>';
-      });
-      tableHTML += '</table>';
-
-      document.getElementById('file-analysis').innerHTML = `
-        <p>Rows Analyzed: ${numRows}</p>
-        ${tableHTML}
-      `;
-    };
-    reader.readAsText(file);
-  }
-
-  function addUser() {
-    const uname = document.getElementById('new-username').value;
-    const pwd = document.getElementById('new-password').value;
-    if (!uname || !pwd) return alert('Please fill both fields.');
-    if (users[uname]) return alert('User already exists.');
-    users[uname] = pwd;
-    saveUsers();
-    renderUserList();
-    alert('User added successfully!');
-  }
-
-  function resetPassword() {
-    const uname = document.getElementById('reset-username').value;
-    const pwd = document.getElementById('reset-password').value;
-    if (!users[uname]) return alert('User does not exist.');
-    users[uname] = pwd;
-    saveUsers();
-    alert('Password reset!');
-  }
-
-  function deleteUser() {
-    const uname = document.getElementById('delete-username').value;
-    if (uname === 'admin') return alert("Can't delete admin!");
-    if (!users[uname]) return alert('User not found.');
-    delete users[uname];
-    saveUsers();
-    renderUserList();
-    alert('User deleted.');
-  }
-
+  // Render the list of users
   function renderUserList() {
-    const ul = document.getElementById('user-list');
-    ul.innerHTML = '';
-    for (let user in users) {
+    const userList = document.getElementById('user-list');
+    userList.innerHTML = ''; // Clear the list
+    for (const username in users) {
       const li = document.createElement('li');
-      li.textContent = user;
-      ul.appendChild(li);
+      li.textContent = username;
+      userList.appendChild(li);
     }
   }
 
-  function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(pageId).classList.add('active');
+  // Add new user
+  function addUser() {
+    const newUsername = document.getElementById('new-username').value;
+    const newPassword = document.getElementById('new-password').value;
 
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-tab'));
-    const tabIndex = {dashboard: 0, roi: 1, upload: 2, admin: 3}[pageId];
-    document.querySelectorAll('.tab')[tabIndex]?.classList.add('active-tab');
+    if (newUsername && newPassword) {
+      users[newUsername] = newPassword;
+      saveUsers();
+      renderUserList();
+    } else {
+      alert('Please provide both username and password.');
+    }
   }
 
-  window.onload = function () {
-    users = JSON.parse(localStorage.getItem('users')) || {
-      admin: 'admin123',
-      user: 'user123'
-    };
-    showApp();
+  // Reset user password
+  function resetPassword() {
+    const resetUsername = document.getElementById('reset-username').value;
+    const newPassword = document.getElementById('reset-password').value;
+
+    if (users[resetUsername]) {
+      users[resetUsername] = newPassword;
+      saveUsers();
+      renderUserList();
+    } else {
+      alert('User not found.');
+    }
+  }
+
+  // Delete user
+  function deleteUser() {
+    const deleteUsername = document.getElementById('delete-username').value;
+
+    if (users[deleteUsername]) {
+      delete users[deleteUsername];
+      saveUsers();
+      renderUserList();
+    } else {
+      alert('User not found.');
+    }
+  }
+
+  // Check if user is logged in when the page loads
+  window.onload = function() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (loggedInUser) {
+      showApp(loggedInUser);
+    }
   };
 </script>
 
